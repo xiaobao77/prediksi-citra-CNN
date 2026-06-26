@@ -30,7 +30,7 @@ DESKRIPSI = {
 }
 
 # --- PERUBAHAN UTAMA DI SINI ---
-MODEL_PATH = "model_klasifikasi_bunga_cnn.h5" 
+MODEL_PATH = "model_klasifikasi_bunga_cnn (7).keras" 
 
 @st.cache_resource
 def load_my_model():
