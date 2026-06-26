@@ -3,11 +3,7 @@ import numpy as np
 from PIL import Image
 import os
 
-st.set_page_config(
-    page_title="Klasifikasi Bunga",
-    page_icon="🌸",
-    layout="centered"
-)
+st.set_page_config(page_title="Klasifikasi Bunga", page_icon="🌸", layout="centered")
 
 st.markdown("""
     <style>
@@ -37,8 +33,12 @@ MODEL_PATH = "model_klasifikasi_bunga_cnn.keras"
 def load_model():
     if not os.path.exists(MODEL_PATH):
         return None
-    import tensorflow as tf
-    return tf.keras.models.load_model(MODEL_PATH)
+    try:
+        import tensorflow as tf
+        return tf.keras.models.load_model(MODEL_PATH)
+    except Exception as e:
+        st.error(f"Gagal load model: {e}")
+        return None
 
 st.subheader("📤 Upload Gambar Bunga")
 uploaded = st.file_uploader("Pilih file gambar (JPG / PNG)", type=["jpg", "jpeg", "png"])
@@ -46,17 +46,15 @@ uploaded = st.file_uploader("Pilih file gambar (JPG / PNG)", type=["jpg", "jpeg"
 if uploaded is not None:
     img_pil = Image.open(uploaded).convert("RGB")
     col1, col2 = st.columns([1, 1])
-
     with col1:
         st.image(img_pil, caption="Gambar yang diupload", use_container_width=True)
-
     with col2:
-        model = load_model()
+        with st.spinner("Memuat model..."):
+            model = load_model()
         if model is None:
-            st.error("Model belum tersedia. Pastikan file model_klasifikasi_bunga_cnn.keras ada di repo GitHub.")
+            st.warning("Model belum tersedia. Pastikan file model_klasifikasi_bunga_cnn.keras ada di repo.")
         else:
             with st.spinner("Menganalisis gambar..."):
-                import tensorflow as tf
                 img_resized = img_pil.resize((IMG_SIZE, IMG_SIZE))
                 img_array = np.array(img_resized, dtype=np.float32)
                 img_array = np.expand_dims(img_array, axis=0)
@@ -64,7 +62,6 @@ if uploaded is not None:
                 idx = int(np.argmax(skor))
                 label = CLASS_NAMES[idx]
                 confidence = float(np.max(skor)) * 100
-
             st.markdown(f"""
                 <div class="kartu-hasil">
                     <div class="label-prediksi">{EMOJI[label]} {label.capitalize()}</div>
