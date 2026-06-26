@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import os
+import tensorflow as tf
 
 st.set_page_config(page_title="Klasifikasi Bunga", page_icon="🌸", layout="centered")
 
@@ -27,17 +28,20 @@ DESKRIPSI = {
     "matahari": "Bunga matahari memiliki cakram cokelat besar dikelilingi kelopak kuning cerah.",
     "tulip": "Tulip berbentuk cangkir dengan warna beragam.",
 }
-MODEL_PATH = "model_klasifikasi_bunga_cnn.keras"
+
+# --- PERUBAHAN UTAMA DI SINI ---
+MODEL_PATH = "model_klasifikasi_bunga_cnn.h5" 
 
 @st.cache_resource
-def load_model():
+def load_my_model():
     if not os.path.exists(MODEL_PATH):
         return None
     try:
-        import tensorflow as tf
-        return tf.keras.models.load_model(MODEL_PATH)
+        # Menambahkan compile=False untuk menghindari error 'Unrecognized keyword arguments'
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        return model
     except Exception as e:
-        st.error(f"Gagal load model: {e}")
+        st.error(f"Error memuat model: {e}")
         return None
 
 st.subheader("📤 Upload Gambar Bunga")
@@ -50,35 +54,29 @@ if uploaded is not None:
         st.image(img_pil, caption="Gambar yang diupload", use_container_width=True)
     with col2:
         with st.spinner("Memuat model..."):
-            model = load_model()
+            model = load_my_model()
+            
         if model is None:
-            st.warning("Model belum tersedia. Pastikan file model_klasifikasi_bunga_cnn.keras ada di repo.")
+            st.warning(f"File {MODEL_PATH} tidak ditemukan atau rusak. Pastikan file .h5 ada di folder.")
         else:
             with st.spinner("Menganalisis gambar..."):
                 img_resized = img_pil.resize((IMG_SIZE, IMG_SIZE))
-                img_array = np.array(img_resized, dtype=np.float32)
+                img_array = np.array(img_resized, dtype=np.float32) / 255.0 # Normalisasi jika perlu
                 img_array = np.expand_dims(img_array, axis=0)
+                
                 skor = model.predict(img_array, verbose=0)[0]
                 idx = int(np.argmax(skor))
                 label = CLASS_NAMES[idx]
                 confidence = float(np.max(skor)) * 100
+                
             st.markdown(f"""
-                <div class="kartu-hasil">
-                    <div class="label-prediksi">{EMOJI[label]} {label.capitalize()}</div>
-                    <div class="confidence">Confidence: <b>{confidence:.2f}%</b></div>
-                </div>
+            <div class="kartu-hasil">
+                <div class="label-prediksi">{EMOJI[label]} {label.capitalize()}</div>
+                <div class="confidence">Confidence: <b>{confidence:.2f}%</b></div>
+            </div>
             """, unsafe_allow_html=True)
             st.markdown(f"<br><small>💬 {DESKRIPSI[label]}</small>", unsafe_allow_html=True)
             st.markdown("#### 📊 Skor Semua Kelas")
             for nama, nilai in zip(CLASS_NAMES, skor):
                 persen = float(nilai) * 100
-                st.progress(int(persen), text=f"{EMOJI[nama]} {nama.capitalize()} — {persen:.2f}%")
-
-with st.expander("🌸 Kelas Bunga yang Didukung"):
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown("### 🌹 Mawar\nKelopak berlapis, warna merah/pink/kuning.")
-    with c2:
-        st.markdown("### 🌻 Matahari\nCakram cokelat, kelopak kuning cerah.")
-    with c3:
-        st.markdown("### 🌷 Tulip\nBentuk cangkir, warna beragam.")
+                st.progress(min(int(persen)/100, 1.0), text=f"{EMOJI[nama]} {nama.capitalize()} — {persen:.2f}%")
