@@ -1,8 +1,7 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-os.environ["KERAS_BACKEND"] = "numpy"
-import keras
+import tensorflow as tf
 import os
 
 # ==========================================================
