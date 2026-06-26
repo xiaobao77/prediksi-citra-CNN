@@ -1,9 +1,5 @@
-[
-server
-]
-headless = true
-
-[
-runtime
-]
+[server]
 pythonVersion = "3.11"
+
+[theme]
+base = "dark"
